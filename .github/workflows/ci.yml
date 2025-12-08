@@ -1,0 +1,56 @@
+name: Go
+
+on:
+  # Enable manually triggering this workflow via the API or web UI
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    tags:
+      - v*
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Install Go
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+        with:
+          go-version-file: 'go.mod'
+          cache: false
+
+
+      - name: Install xk6
+        uses: grafana/setup-xk6@97b842b765bd3fea56db7195e98c5f61cab8fe46 # v1.1.1
+
+      - name: Check build
+        run: |
+            MODULE_NAME=`go list -m`
+            xk6 build --with $MODULE_NAME
+
+  test:
+    name: Test Go Code
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8  # v5.0.0
+        with:
+          persist-credentials: false
+
+      - name: Setup Go
+        uses: actions/setup-go@4dc6199c7b1a012772edbd06daecab0f50c9053c # v6.1.0
+        with:
+          go-version-file: 'go.mod'
+          cache: false
+
+      - name: Test
+        run: go test -race ./...

@@ -1,0 +1,23 @@
+---
+name: {{ .Name }}
+description: {{ .Description }}
+tools:
+{{- range .Tools }}
+  - {{ . }}
+{{- end }}
+model: {{ .Model }}
+mcp-servers:
+{{- range $name, $config := .McpServers }}
+  {{ $name }}:
+    type: {{ $config.Type }}
+    command: {{ $config.Command }}
+    args:
+{{- range $config.Args }}
+      - {{ . }}
+{{- end }}
+    tools:
+{{- range $config.Tools }}
+      - {{ . }}
+{{- end }}
+{{- end }}
+---
