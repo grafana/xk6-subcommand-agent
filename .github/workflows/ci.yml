@@ -33,9 +33,11 @@ jobs:
         uses: grafana/setup-xk6@97b842b765bd3fea56db7195e98c5f61cab8fe46 # v1.1.1
 
       - name: Check build
+        # Build using the checked-out source rather than @latest from the
+        # module proxy, so pull requests actually exercise the PR's code.
         run: |
-            MODULE_NAME=`go list -m`
-            xk6 build --with $MODULE_NAME
+            MODULE_NAME=$(go list -m)
+            xk6 build --with "${MODULE_NAME}=."
 
   test:
     name: Test Go Code
