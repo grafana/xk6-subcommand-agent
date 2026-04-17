@@ -53,8 +53,8 @@ Use the `init` subcommand to scaffold MCP-aware agents for the platforms you car
 ```bash
 k6 x agent init claude
 k6 x agent init vscode --force
-k6 x agent init opencode
-k6 x agent init --all         # claude + vscode + opencode
+k6 x agent init claude opencode   # install multiple platforms in one go
+k6 x agent init --all             # claude + vscode + opencode
 ```
 
 - `--force` removes existing agent folders before recreating them.

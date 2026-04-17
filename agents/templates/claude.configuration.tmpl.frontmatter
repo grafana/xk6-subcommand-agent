@@ -1,6 +1,0 @@
----
-name: {{ .Name }}
-description: {{ .Description }}
-model: {{ .Model }}
-tools: {{ .Tools }}
----

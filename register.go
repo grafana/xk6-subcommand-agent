@@ -1,10 +1,12 @@
-// Package initagents provides k6 subcommand for initializing AI agent configurations.
+// Package initagents wires the `agent` command group into k6's `x`
+// subcommand surface. All real behavior lives in the data-driven
+// [github.com/grafana/xk6-agent/agents] package.
 package initagents
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/spf13/cobra"
@@ -12,26 +14,7 @@ import (
 	"go.k6.io/k6/subcommand"
 
 	"github.com/grafana/xk6-agent/agents"
-	"github.com/grafana/xk6-agent/agents/claude"
-	"github.com/grafana/xk6-agent/agents/opencode"
-	"github.com/grafana/xk6-agent/agents/vscode"
 )
-
-var supportedPlatforms = []string{"claude", "vscode", "opencode"}
-
-type initializerFactory func() agents.Initializer
-
-var defaultInitializerFactories = map[string]initializerFactory{
-	"claude": func() agents.Initializer {
-		return claude.NewCode()
-	},
-	"vscode": func() agents.Initializer {
-		return vscode.NewVSCode()
-	},
-	"opencode": func() agents.Initializer {
-		return opencode.NewOpenCode()
-	},
-}
 
 func init() {
 	subcommand.RegisterExtension("agent", registerAgentCommand)
@@ -43,111 +26,175 @@ func registerAgentCommand(gs *state.GlobalState) *cobra.Command {
 		Short: "Manage AI agent integrations for k6",
 		Long: `Manage AI agent configurations for supported platforms.
 
-Use "k6 x agent init [platform]" to scaffold one platform or
-"k6 x agent init --all" to install all configurations at once.`,
+Use "k6 x agent init [platforms...]" to scaffold one or more platforms, or
+"k6 x agent init --all" to install every supported configuration at once.`,
 	}
-
 	cmd.AddCommand(newInitCommand(gs))
 	cmd.AddCommand(newStatusCommand(gs))
-
 	return cmd
 }
 
-func newInitCommand(gs *state.GlobalState) *cobra.Command {
-	return newInitCommandWithFactories(gs, defaultInitializerFactories)
+// platformIDs returns every registered platform ID, in declaration order.
+func platformIDs() []string {
+	ids := make([]string, 0, len(agents.Platforms))
+	for _, p := range agents.Platforms {
+		ids = append(ids, p.ID)
+	}
+	return ids
 }
 
-func newInitCommandWithFactories(gs *state.GlobalState, factories map[string]initializerFactory) *cobra.Command {
-	var force bool
-	var all bool
+// lookupPlatform returns the Platform with the given ID or an error listing
+// the valid choices.
+func lookupPlatform(id string) (agents.Platform, error) {
+	for _, p := range agents.Platforms {
+		if p.ID == id {
+			return p, nil
+		}
+	}
+	return agents.Platform{}, fmt.Errorf(
+		"invalid platform %q: must be one of %s",
+		id, strings.Join(platformIDs(), ", "),
+	)
+}
+
+// resolvePlatforms turns positional args + --all into the list of Platforms
+// to install. Duplicate args are collapsed, order is preserved.
+func resolvePlatforms(args []string, all bool) ([]agents.Platform, error) {
+	if all {
+		if len(args) > 0 {
+			return nil, fmt.Errorf(
+				"cannot specify a platform argument with --all; omit arguments to install every platform",
+			)
+		}
+		out := make([]agents.Platform, len(agents.Platforms))
+		copy(out, agents.Platforms)
+		return out, nil
+	}
+	if len(args) == 0 {
+		return nil, fmt.Errorf(
+			"missing platform argument: provide one or more of %s, or use --all",
+			strings.Join(platformIDs(), ", "),
+		)
+	}
+
+	seen := make(map[string]bool, len(args))
+	out := make([]agents.Platform, 0, len(args))
+	for _, raw := range args {
+		id := strings.ToLower(strings.TrimSpace(raw))
+		if seen[id] {
+			continue
+		}
+		p, err := lookupPlatform(id)
+		if err != nil {
+			return nil, err
+		}
+		seen[id] = true
+		out = append(out, p)
+	}
+	return out, nil
+}
+
+func newInitCommand(gs *state.GlobalState) *cobra.Command {
+	var force, all bool
 
 	cmd := &cobra.Command{
-		Use:   "init [platform]",
+		Use:   "init [platform...]",
 		Short: "Initialize AI agent configuration",
-		Long: `Initialize AI agent configurations for supported platforms.
+		Long: `Initialize AI agent configurations for one or more supported platforms.
 
-Supported platforms:
-  - claude: Claude Code agents (.claude folder)
-  - vscode: VSCode/Copilot agents (.github/agents and .vscode/mcp.json)
-  - opencode: OpenCode prompts (.opencode/prompts and opencode.json)
+Supported platforms: ` + strings.Join(platformIDs(), ", ") + `.
 
 Examples:
   k6 x agent init claude
   k6 x agent init vscode --force
-  k6 x agent init opencode
+  k6 x agent init claude opencode
   k6 x agent init --all
   k6 x agent init --all --force`,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			platforms, err := resolvePlatforms(args, all)
+			targets, err := resolvePlatforms(args, all)
 			if err != nil {
 				return err
 			}
 
+			opts := agents.InitializerOptions{Force: force}
+			fs := &agents.OSFileSystem{}
 			ctx := cmd.Context()
-			opts := agents.InitializerOptions{
-				Force: force,
+
+			names := make([]string, len(targets))
+			for i, t := range targets {
+				names[i] = t.DisplayName
 			}
-
-			platformList := formatPlatformList(platforms)
-			if _, err := fmt.Fprintf(gs.Stdout, "🎯 Initializing k6 agents for %s\n\n", platformList); err != nil {
-				return fmt.Errorf("failed to write header: %w", err)
-			}
-
-			if factories == nil {
-				factories = defaultInitializerFactories
-			}
-
-			results := make(map[string]*agents.InitializeResult)
-			var initErrors []error
-
-			for _, p := range platforms {
-				factory, ok := factories[p]
-				if !ok {
-					initErrors = append(initErrors, fmt.Errorf("unsupported platform: %s", p))
-					continue
-				}
-
-				initializer := factory()
-
-				if err := initializer.Validate(ctx, opts); err != nil {
-					initErrors = append(initErrors, fmt.Errorf("%s: %w", p, err))
-					continue
-				}
-
-				result, err := initializer.Initialize(ctx, opts)
-				if err != nil {
-					initErrors = append(initErrors, fmt.Errorf("%s: %w", p, err))
-					continue
-				}
-
-				results[p] = result
-			}
-
-			if len(initErrors) > 0 {
-				for _, err := range initErrors {
-					if _, printErr := fmt.Fprintf(gs.Stderr, "❌ Error: %v\n", err); printErr != nil {
-						return printErr
-					}
-				}
-				return fmt.Errorf("failed to initialize one or more platforms")
-			}
-
-			if err := printResults(gs, platforms, results); err != nil {
+			if _, err := fmt.Fprintf(gs.Stdout, "🎯 Initializing k6 agents for %s\n\n", joinList(names)); err != nil {
 				return err
 			}
 
-			if _, err := fmt.Fprintf(gs.Stdout, "\n✅ Done.\n"); err != nil {
-				return fmt.Errorf("failed to write success message: %w", err)
+			for i, p := range targets {
+				result, err := agents.Install(ctx, fs, p, opts)
+				if err != nil {
+					if _, perr := fmt.Fprintf(gs.Stderr, "❌ %s: %v\n", p.ID, err); perr != nil {
+						return perr
+					}
+					return fmt.Errorf("failed to initialize %s", p.ID)
+				}
+				if i > 0 {
+					if _, err := fmt.Fprintln(gs.Stdout); err != nil {
+						return err
+					}
+				}
+				if err := printInstallSummary(gs, p, result); err != nil {
+					return err
+				}
 			}
 
+			if _, err := fmt.Fprintln(gs.Stdout, "\n✅ Done."); err != nil {
+				return err
+			}
 			return nil
 		},
 	}
 
 	cmd.Flags().BoolVar(&force, "force", false, "Force overwrite existing agent folders")
 	cmd.Flags().BoolVar(&all, "all", false, "Initialize all supported agent platforms")
-
 	return cmd
+}
+
+// printInstallSummary renders a compact per-platform summary: a header, a
+// count of agent files written, the list of other files created, and the
+// platform's post-install message if any.
+func printInstallSummary(gs *state.GlobalState, p agents.Platform, result *agents.InitializeResult) error {
+	if _, err := fmt.Fprintf(gs.Stdout, "📁 %s\n", p.DisplayName); err != nil {
+		return err
+	}
+
+	// Group: agent files vs. everything else.
+	var agentFiles, otherFiles []string
+	for _, f := range result.FilesCreated {
+		if strings.Contains(f, "/agents/") || strings.Contains(f, "/prompts/") {
+			agentFiles = append(agentFiles, f)
+		} else {
+			otherFiles = append(otherFiles, f)
+		}
+	}
+	if len(agentFiles) > 0 {
+		if _, err := fmt.Fprintf(gs.Stdout, "   %d agent file(s)\n", len(agentFiles)); err != nil {
+			return err
+		}
+	}
+	sort.Strings(otherFiles)
+	for _, f := range otherFiles {
+		if _, err := fmt.Fprintf(gs.Stdout, "   created %s\n", f); err != nil {
+			return err
+		}
+	}
+	if p.PostInstall != "" {
+		if _, err := fmt.Fprintln(gs.Stdout); err != nil {
+			return err
+		}
+		if _, err := fmt.Fprintln(gs.Stdout, p.PostInstall); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func newStatusCommand(gs *state.GlobalState) *cobra.Command {
@@ -158,255 +205,47 @@ func newStatusCommandWithReporter(gs *state.GlobalState, reporter statusCollecto
 	if reporter == nil {
 		reporter = newStatusReporter()
 	}
-
-	cmd := &cobra.Command{
+	return &cobra.Command{
 		Use:   "status",
 		Short: "Report agent configuration status",
 		Long: `Report which agent platforms are initialized in the current workspace
 and whether the mcp-k6 dependency is installed locally.`,
-		RunE: func(cmd *cobra.Command, _ []string) error {
-			getwd := os.Getwd
+		RunE: func(_ *cobra.Command, _ []string) error {
+			getwd := os.Getwd //nolint:forbidigo // fallback when GlobalState.Getwd is nil
 			if gs != nil && gs.Getwd != nil {
 				getwd = gs.Getwd
 			}
-
 			workingDir, err := getwd()
 			if err != nil {
 				return fmt.Errorf("failed to resolve working directory: %w", err)
 			}
-
 			report, err := reporter.Collect(workingDir)
 			if err != nil {
 				return fmt.Errorf("failed to collect agent status: %w", err)
 			}
-
 			return renderStatusReport(gs, report)
 		},
 	}
-
-	return cmd
 }
 
-func resolvePlatforms(args []string, all bool) ([]string, error) {
-	if all {
-		if len(args) > 0 {
-			return nil, fmt.Errorf("cannot specify a platform argument when using --all; omit the argument to initialize every platform")
-		}
-		return append([]string(nil), supportedPlatforms...), nil
-	}
-
-	if len(args) == 0 {
-		return nil, fmt.Errorf("missing platform argument: provide one of %s or use --all", strings.Join(supportedPlatforms, ", "))
-	}
-
-	if len(args) > 1 {
-		return nil, fmt.Errorf("too many arguments: agent init accepts a single platform")
-	}
-
-	provided := strings.TrimSpace(args[0])
-	platform := strings.ToLower(provided)
-	switch platform {
-	case "claude":
-		return []string{"claude"}, nil
-	case "vscode":
-		return []string{"vscode"}, nil
-	case "opencode":
-		return []string{"opencode"}, nil
-	default:
-		return nil, fmt.Errorf("invalid platform %q: must be one of %s", provided, strings.Join(supportedPlatforms, ", "))
-	}
-}
-
-// formatPlatformList formats a list of platform names for display.
-func formatPlatformList(platforms []string) string {
-	if len(platforms) == 0 {
+// joinList formats a list of names like "A and B" or "A, B, and C".
+func joinList(names []string) string {
+	switch len(names) {
+	case 0:
 		return ""
-	}
-	if len(platforms) == 1 {
-		return platformDisplayName(platforms[0])
-	}
-
-	names := make([]string, len(platforms))
-	for i, p := range platforms {
-		names[i] = platformDisplayName(p)
-	}
-	return strings.Join(names, " and ")
-}
-
-// platformDisplayName returns the display name for a platform.
-func platformDisplayName(platform string) string {
-	switch platform {
-	case "claude":
-		return "Claude Code"
-	case "vscode":
-		return "VSCode/GitHub Copilot"
-	case "opencode":
-		return "OpenCode"
+	case 1:
+		return names[0]
+	case 2:
+		return names[0] + " and " + names[1]
 	default:
-		return platform
+		return strings.Join(names[:len(names)-1], ", ") + ", and " + names[len(names)-1]
 	}
-}
-
-// printResults prints the initialization results for all platforms.
-func printResults(gs *state.GlobalState, platforms []string, results map[string]*agents.InitializeResult) error {
-	for i, p := range platforms {
-		result, ok := results[p]
-		if !ok {
-			continue
-		}
-
-		// Add spacing between platforms if there are multiple
-		if i > 0 {
-			if _, err := fmt.Fprintln(gs.Stdout); err != nil {
-				return err
-			}
-		}
-
-		// Print platform-specific results
-		switch p {
-		case "claude":
-			if err := printClaudeResults(gs, result); err != nil {
-				return err
-			}
-		case "vscode":
-			if err := printVSCodeResults(gs, result); err != nil {
-				return err
-			}
-		case "opencode":
-			if err := printOpenCodeResults(gs, result); err != nil {
-				return err
-			}
-		}
-	}
-	return nil
-}
-
-// printClaudeResults prints the results for Claude Code initialization.
-func printClaudeResults(gs *state.GlobalState, result *agents.InitializeResult) error {
-	if len(result.FilesCreated) == 0 {
-		return nil
-	}
-
-	// Count agent files
-	agentCount := countFilesMatching(result.FilesCreated, ".claude/agents/")
-
-	// Print grouped summary
-	if _, err := fmt.Fprintln(gs.Stdout, "📁 Claude Code"); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintf(gs.Stdout, "   Created .claude/ with %d agents and MCP settings\n", agentCount); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// printVSCodeResults prints the results for VSCode initialization.
-func printVSCodeResults(gs *state.GlobalState, result *agents.InitializeResult) error {
-	if len(result.FilesCreated) == 0 {
-		return nil
-	}
-
-	// Count agent files
-	agentCount := countFilesMatching(result.FilesCreated, ".github/agents/")
-
-	// Print grouped summary
-	if _, err := fmt.Fprintln(gs.Stdout, "📁 VSCode/GitHub Copilot"); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintf(gs.Stdout, "   Created .github/agents/ with %d agents\n", agentCount); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintln(gs.Stdout, "   Created .vscode/mcp.json with local MCP settings"); err != nil {
-		return err
-	}
-
-	// Print numbered steps for GitHub Copilot MCP configuration
-	if _, err := fmt.Fprintln(gs.Stdout); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintln(gs.Stdout, "⚠️  To enable MCP in GitHub Copilot:"); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintln(gs.Stdout, "   1. Go to github.com > Settings > Copilot > Coding agent"); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintln(gs.Stdout, "   2. Scroll to \"MCP configuration\" and add the k6 server:"); err != nil {
-		return err
-	}
-
-	// Create the MCP configuration JSON with indentation for display
-	mcpConfig := map[string]interface{}{
-		"mcpServers": map[string]interface{}{
-			"k6": map[string]interface{}{
-				"type":    "stdio",
-				"command": "mcp-k6",
-				"args":    []string{},
-				"tools":   []string{"*"},
-			},
-		},
-	}
-
-	jsonBytes, err := json.MarshalIndent(mcpConfig, "      ", "  ")
-	if err != nil {
-		return fmt.Errorf("failed to marshal MCP configuration: %w", err)
-	}
-
-	if _, err := fmt.Fprintln(gs.Stdout); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintf(gs.Stdout, "      %s\n", string(jsonBytes)); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintln(gs.Stdout); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintln(gs.Stdout, "   3. Save your changes"); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// printOpenCodeResults prints the results for OpenCode initialization.
-func printOpenCodeResults(gs *state.GlobalState, result *agents.InitializeResult) error {
-	if len(result.FilesCreated) == 0 {
-		return nil
-	}
-
-	// Count prompt files
-	promptCount := countFilesMatching(result.FilesCreated, ".opencode/prompts/")
-
-	// Print grouped summary
-	if _, err := fmt.Fprintln(gs.Stdout, "📁 OpenCode"); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintf(gs.Stdout, "   Created .opencode/prompts/ with %d prompts\n", promptCount); err != nil {
-		return err
-	}
-	if _, err := fmt.Fprintln(gs.Stdout, "   Created opencode.json with MCP and agent settings"); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// countFilesMatching counts files that contain the given pattern.
-func countFilesMatching(files []string, pattern string) int {
-	count := 0
-	for _, file := range files {
-		if strings.Contains(file, pattern) {
-			count++
-		}
-	}
-	return count
 }
 
 func renderStatusReport(gs *state.GlobalState, report *StatusReport) error {
 	if gs == nil || gs.Stdout == nil {
 		return fmt.Errorf("invalid global state: stdout is not available")
 	}
-
 	if _, err := fmt.Fprintln(gs.Stdout, "🤖 Agent installation status"); err != nil {
 		return err
 	}
@@ -436,36 +275,33 @@ func printPlatformStatus(gs *state.GlobalState, status PlatformStatus) error {
 	if status.Installed {
 		icon = "✅"
 	}
-
-	if _, err := fmt.Fprintf(gs.Stdout, "%s %s\n", icon, platformDisplayName(status.Name)); err != nil {
+	if _, err := fmt.Fprintf(gs.Stdout, "%s %s\n", icon, status.DisplayName); err != nil {
 		return err
 	}
-
 	for _, detail := range status.Details {
 		if _, err := fmt.Fprintf(gs.Stdout, "   - %s\n", detail); err != nil {
 			return err
 		}
 	}
+	if status.Installed {
+		return nil
+	}
+	return printNotInstalledDetails(gs, status)
+}
 
-	if !status.Installed {
-		if len(status.Missing) == 0 {
-			if _, err := fmt.Fprintf(gs.Stdout, "   - Not detected in this workspace\n"); err != nil {
-				return err
-			}
-		} else {
-			for _, missing := range status.Missing {
-				if _, err := fmt.Fprintf(gs.Stdout, "   - Missing: %s\n", missing); err != nil {
-					return err
-				}
-			}
-		}
-
-		if _, err := fmt.Fprintf(gs.Stdout, "   - Hint: k6 x agent init %s\n", status.Name); err != nil {
+func printNotInstalledDetails(gs *state.GlobalState, status PlatformStatus) error {
+	if len(status.Missing) == 0 {
+		if _, err := fmt.Fprintln(gs.Stdout, "   - Not detected in this workspace"); err != nil {
 			return err
 		}
 	}
-
-	return nil
+	for _, missing := range status.Missing {
+		if _, err := fmt.Fprintf(gs.Stdout, "   - Missing: %s\n", missing); err != nil {
+			return err
+		}
+	}
+	_, err := fmt.Fprintf(gs.Stdout, "   - Hint: k6 x agent init %s\n", status.ID)
+	return err
 }
 
 func printMCPStatus(gs *state.GlobalState, status MCPStatus) error {
@@ -473,23 +309,16 @@ func printMCPStatus(gs *state.GlobalState, status MCPStatus) error {
 	if !status.Installed {
 		icon = "❌"
 	}
-
 	if _, err := fmt.Fprintf(gs.Stdout, "%s mcp-k6 dependency\n", icon); err != nil {
 		return err
 	}
-
 	if status.Installed {
-		if _, err := fmt.Fprintf(gs.Stdout, "   - Found at %s\n", status.Path); err != nil {
-			return err
-		}
-	} else {
-		if _, err := fmt.Fprintf(gs.Stdout, "   - Not found on PATH\n"); err != nil {
-			return err
-		}
-		if _, err := fmt.Fprintf(gs.Stdout, "   - Install instructions: https://github.com/grafana/mcp-k6\n"); err != nil {
-			return err
-		}
+		_, err := fmt.Fprintf(gs.Stdout, "   - Found at %s\n", status.Path)
+		return err
 	}
-
-	return nil
+	if _, err := fmt.Fprintf(gs.Stdout, "   - Not found on PATH\n"); err != nil {
+		return err
+	}
+	_, err := fmt.Fprintf(gs.Stdout, "   - Install instructions: https://github.com/grafana/mcp-k6\n")
+	return err
 }
