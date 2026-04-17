@@ -1,4 +1,4 @@
-//nolint:forbidigo,gosec
+//nolint:forbidigo // thin wrapper over os.* is the point
 package agents
 
 import (

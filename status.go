@@ -1,3 +1,4 @@
+// Package initagents — see register.go for the command-wiring entry point.
 package initagents
 
 import (
@@ -7,22 +8,33 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/grafana/xk6-agent/agents"
 )
 
 const mcpBinaryName = "mcp-k6"
 
+// StatusReport captures the output of `k6 x agent status`.
 type StatusReport struct {
 	Platforms []PlatformStatus
 	MCP       MCPStatus
 }
 
+// PlatformStatus describes one platform's installation state.
 type PlatformStatus struct {
-	Name      string
+	// ID is the lowercase platform identifier used by the CLI.
+	ID string
+	// DisplayName is the human-readable platform name.
+	DisplayName string
+	// Installed is true when every required path exists.
 	Installed bool
-	Details   []string
-	Missing   []string
+	// Details are human-readable lines shown under an installed platform.
+	Details []string
+	// Missing are human-readable lines shown under a not-installed platform.
+	Missing []string
 }
 
+// MCPStatus reports whether the mcp-k6 binary is resolvable on PATH.
 type MCPStatus struct {
 	Installed bool
 	Path      string
@@ -45,11 +57,11 @@ type fileInspector interface {
 type osFileInspector struct{}
 
 func (osFileInspector) Stat(path string) (fs.FileInfo, error) {
-	return os.Stat(path)
+	return os.Stat(path) //nolint:forbidigo // filesystem seam
 }
 
 func (osFileInspector) ReadDir(path string) ([]fs.DirEntry, error) {
-	return os.ReadDir(path)
+	return os.ReadDir(path) //nolint:forbidigo // filesystem seam
 }
 
 func newStatusReporter() *statusReporter {
@@ -59,189 +71,111 @@ func newStatusReporter() *statusReporter {
 	}
 }
 
+// Collect walks every platform descriptor and produces a StatusReport.
 func (r *statusReporter) Collect(root string) (*StatusReport, error) {
-	platforms := make([]PlatformStatus, 0, len(supportedPlatforms))
-
-	claude, err := r.claudeStatus(root)
-	if err != nil {
-		return nil, err
+	platforms := make([]PlatformStatus, 0, len(agents.Platforms))
+	for _, p := range agents.Platforms {
+		ps, err := r.platformStatus(root, p)
+		if err != nil {
+			return nil, err
+		}
+		platforms = append(platforms, ps)
 	}
-	platforms = append(platforms, claude)
-
-	vscode, err := r.vscodeStatus(root)
-	if err != nil {
-		return nil, err
-	}
-	platforms = append(platforms, vscode)
-
-	opencode, err := r.openCodeStatus(root)
-	if err != nil {
-		return nil, err
-	}
-	platforms = append(platforms, opencode)
-
 	mcp, err := r.mcpStatus()
 	if err != nil {
 		return nil, err
 	}
-
-	return &StatusReport{
-		Platforms: platforms,
-		MCP:       mcp,
-	}, nil
+	return &StatusReport{Platforms: platforms, MCP: mcp}, nil
 }
 
-func (r *statusReporter) claudeStatus(root string) (PlatformStatus, error) {
-	status := PlatformStatus{Name: "claude"}
+// platformStatus evaluates every StatusPath a platform declares and
+// summarizes the result. A platform is considered "installed" only if
+// every declared path is present (and non-empty, for non-empty-dir paths).
+func (r *statusReporter) platformStatus(root string, p agents.Platform) (PlatformStatus, error) {
+	status := PlatformStatus{ID: p.ID, DisplayName: p.DisplayName}
 
-	claudeDir := filepath.Join(root, ".claude")
-	exists, err := r.dirExists(claudeDir)
-	if err != nil {
-		return status, fmt.Errorf("failed to inspect %s: %w", claudeDir, err)
-	}
-	if !exists {
-		status.Missing = append(status.Missing, ".claude directory")
+	if len(p.StatusPaths) == 0 {
+		// Nothing to check — treat as never installed.
 		return status, nil
 	}
 
-	agentsDir := filepath.Join(claudeDir, "agents")
-	count, err := r.countEntries(agentsDir)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			status.Missing = append(status.Missing, ".claude/agents directory")
-			return status, nil
+	allPresent := true
+	for _, sp := range p.StatusPaths {
+		abs := filepath.Join(root, sp.Path)
+		present, detail, err := r.checkStatusPath(abs, sp)
+		if err != nil {
+			return status, err
 		}
-		return status, fmt.Errorf("failed to inspect %s: %w", agentsDir, err)
+		if !present {
+			allPresent = false
+			status.Missing = append(status.Missing, sp.Path)
+			continue
+		}
+		if detail != "" {
+			status.Details = append(status.Details, detail)
+		}
 	}
 
-	if count == 0 {
-		status.Missing = append(status.Missing, ".claude/agents is empty")
-		return status, nil
-	}
-
-	status.Installed = true
-	status.Details = append(status.Details, fmt.Sprintf("%d agent file(s) in .claude/agents", count))
-
+	status.Installed = allPresent
 	return status, nil
 }
 
-func (r *statusReporter) vscodeStatus(root string) (PlatformStatus, error) {
-	status := PlatformStatus{Name: "vscode"}
-
-	agentsDir := filepath.Join(root, ".github", "agents")
-	count, err := r.countEntries(agentsDir)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			status.Missing = append(status.Missing, ".github/agents directory")
-		} else {
-			return status, fmt.Errorf("failed to inspect %s: %w", agentsDir, err)
+func (r *statusReporter) checkStatusPath(abs string, sp agents.StatusPath) (bool, string, error) {
+	switch sp.Kind {
+	case "file":
+		info, err := r.fs.Stat(abs)
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return false, "", nil
+			}
+			return false, "", fmt.Errorf("inspect %s: %w", abs, err)
 		}
-	} else if count == 0 {
-		status.Missing = append(status.Missing, ".github/agents is empty")
-	}
-
-	mcpConfigPath := filepath.Join(root, ".vscode", "mcp.json")
-	mcpConfigExists, err := r.fileExists(mcpConfigPath)
-	if err != nil {
-		return status, fmt.Errorf("failed to inspect %s: %w", mcpConfigPath, err)
-	}
-	if !mcpConfigExists {
-		status.Missing = append(status.Missing, ".vscode/mcp.json")
-	}
-
-	if len(status.Missing) == 0 {
-		status.Installed = true
-		status.Details = append(status.Details, fmt.Sprintf("%d agent file(s) in .github/agents", count))
-		status.Details = append(status.Details, ".vscode/mcp.json detected")
-	}
-
-	return status, nil
-}
-
-func (r *statusReporter) openCodeStatus(root string) (PlatformStatus, error) {
-	status := PlatformStatus{Name: "opencode"}
-
-	promptsDir := filepath.Join(root, ".opencode", "prompts")
-	count, err := r.countEntries(promptsDir)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			status.Missing = append(status.Missing, ".opencode/prompts directory")
-		} else {
-			return status, fmt.Errorf("failed to inspect %s: %w", promptsDir, err)
+		if info.IsDir() {
+			return false, "", nil
 		}
-	} else if count == 0 {
-		status.Missing = append(status.Missing, ".opencode/prompts is empty")
-	}
+		return true, fmt.Sprintf("%s (%s)", sp.Path, sp.Description), nil
 
-	configPath := filepath.Join(root, "opencode.json")
-	configExists, err := r.fileExists(configPath)
-	if err != nil {
-		return status, fmt.Errorf("failed to inspect %s: %w", configPath, err)
-	}
-	if !configExists {
-		status.Missing = append(status.Missing, "opencode.json")
-	}
+	case "dir":
+		info, err := r.fs.Stat(abs)
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return false, "", nil
+			}
+			return false, "", fmt.Errorf("inspect %s: %w", abs, err)
+		}
+		if !info.IsDir() {
+			return false, "", nil
+		}
+		return true, fmt.Sprintf("%s (%s)", sp.Path, sp.Description), nil
 
-	if len(status.Missing) == 0 {
-		status.Installed = true
-		status.Details = append(status.Details, fmt.Sprintf("%d prompt file(s) in .opencode/prompts", count))
-		status.Details = append(status.Details, "opencode.json detected")
-	}
+	case "non-empty-dir":
+		entries, err := r.fs.ReadDir(abs)
+		if err != nil {
+			if errors.Is(err, fs.ErrNotExist) {
+				return false, "", nil
+			}
+			return false, "", fmt.Errorf("inspect %s: %w", abs, err)
+		}
+		if len(entries) == 0 {
+			return false, "", nil
+		}
+		return true, fmt.Sprintf("%d %s in %s", len(entries), sp.Description, sp.Path), nil
 
-	return status, nil
+	default:
+		return false, "", fmt.Errorf("unknown status path kind %q", sp.Kind)
+	}
 }
 
 func (r *statusReporter) mcpStatus() (MCPStatus, error) {
 	if r.lookPath == nil {
 		r.lookPath = exec.LookPath
 	}
-
 	path, err := r.lookPath(mcpBinaryName)
 	if err != nil {
-		var execErr *exec.Error
-		if errors.Is(err, exec.ErrNotFound) || (errors.As(err, &execErr) && execErr.Err == exec.ErrNotFound) {
+		if errors.Is(err, exec.ErrNotFound) {
 			return MCPStatus{Installed: false}, nil
 		}
-		return MCPStatus{}, fmt.Errorf("failed to inspect %s: %w", mcpBinaryName, err)
+		return MCPStatus{}, fmt.Errorf("inspect %s: %w", mcpBinaryName, err)
 	}
-
-	return MCPStatus{
-		Installed: true,
-		Path:      path,
-	}, nil
-}
-
-func (r *statusReporter) dirExists(path string) (bool, error) {
-	info, err := r.fs.Stat(path)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return false, nil
-		}
-		return false, err
-	}
-	return info.IsDir(), nil
-}
-
-func (r *statusReporter) fileExists(path string) (bool, error) {
-	info, err := r.fs.Stat(path)
-	if err != nil {
-		if errors.Is(err, fs.ErrNotExist) {
-			return false, nil
-		}
-		return false, err
-	}
-	return !info.IsDir(), nil
-}
-
-func (r *statusReporter) countEntries(path string) (int, error) {
-	entries, err := r.fs.ReadDir(path)
-	if err != nil {
-		return 0, err
-	}
-
-	count := 0
-	for range entries {
-		count++
-	}
-	return count, nil
+	return MCPStatus{Installed: true, Path: path}, nil
 }
