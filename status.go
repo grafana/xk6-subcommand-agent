@@ -1,4 +1,4 @@
-// Package initagents — see register.go for the command-wiring entry point.
+//nolint:forbidigo
 package initagents
 
 import (
@@ -9,32 +9,24 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/grafana/xk6-agent/agents"
+	"github.com/grafana/xk6-agent/agents/adapters"
 )
 
-const mcpBinaryName = "mcp-k6"
-
-// StatusReport captures the output of `k6 x agent status`.
+// StatusReport holds the overall status of agent installations.
 type StatusReport struct {
 	Platforms []PlatformStatus
 	MCP       MCPStatus
 }
 
-// PlatformStatus describes one platform's installation state.
+// PlatformStatus holds the status of a single platform.
 type PlatformStatus struct {
-	// ID is the lowercase platform identifier used by the CLI.
-	ID string
-	// DisplayName is the human-readable platform name.
-	DisplayName string
-	// Installed is true when every required path exists.
+	Name      string
 	Installed bool
-	// Details are human-readable lines shown under an installed platform.
-	Details []string
-	// Missing are human-readable lines shown under a not-installed platform.
-	Missing []string
+	Details   []string
+	Missing   []string
 }
 
-// MCPStatus reports whether the mcp-k6 binary is resolvable on PATH.
+// MCPStatus holds the status of the MCP binary.
 type MCPStatus struct {
 	Installed bool
 	Path      string
@@ -57,11 +49,11 @@ type fileInspector interface {
 type osFileInspector struct{}
 
 func (osFileInspector) Stat(path string) (fs.FileInfo, error) {
-	return os.Stat(path) //nolint:forbidigo // filesystem seam
+	return os.Stat(path)
 }
 
 func (osFileInspector) ReadDir(path string) ([]fs.DirEntry, error) {
-	return os.ReadDir(path) //nolint:forbidigo // filesystem seam
+	return os.ReadDir(path)
 }
 
 func newStatusReporter() *statusReporter {
@@ -71,111 +63,87 @@ func newStatusReporter() *statusReporter {
 	}
 }
 
-// Collect walks every platform descriptor and produces a StatusReport.
 func (r *statusReporter) Collect(root string) (*StatusReport, error) {
-	platforms := make([]PlatformStatus, 0, len(agents.Platforms))
-	for _, p := range agents.Platforms {
-		ps, err := r.platformStatus(root, p)
+	allTargets := adapters.All()
+	platforms := make([]PlatformStatus, 0, len(allTargets))
+
+	for _, t := range allTargets {
+		status, err := r.targetStatus(root, t)
 		if err != nil {
 			return nil, err
 		}
-		platforms = append(platforms, ps)
+
+		platforms = append(platforms, status)
 	}
-	mcp, err := r.mcpStatus()
+
+	mcpStatus, err := r.mcpStatus()
 	if err != nil {
 		return nil, err
 	}
-	return &StatusReport{Platforms: platforms, MCP: mcp}, nil
+
+	return &StatusReport{
+		Platforms: platforms,
+		MCP:       mcpStatus,
+	}, nil
 }
 
-// platformStatus evaluates every StatusPath a platform declares and
-// summarizes the result. A platform is considered "installed" only if
-// every declared path is present (and non-empty, for non-empty-dir paths).
-func (r *statusReporter) platformStatus(root string, p agents.Platform) (PlatformStatus, error) {
-	status := PlatformStatus{ID: p.ID, DisplayName: p.DisplayName}
+// targetStatus checks whether a target's files are installed by looking
+// for its MCP config path and skills directory.
+func (r *statusReporter) targetStatus(root string, t adapters.Target) (PlatformStatus, error) {
+	status := PlatformStatus{Name: t.Name()}
+	caps := t.Capabilities()
 
-	if len(p.StatusPaths) == 0 {
-		// Nothing to check — treat as never installed.
-		return status, nil
-	}
-
-	allPresent := true
-	for _, sp := range p.StatusPaths {
-		abs := filepath.Join(root, sp.Path)
-		present, detail, err := r.checkStatusPath(abs, sp)
+	// Check for the MCP config file if the target defines one.
+	if caps.MCPConfigPath != "" {
+		mcpPath := filepath.Join(root, caps.MCPConfigPath)
+		exists, err := r.fileExists(mcpPath)
 		if err != nil {
-			return status, err
+			return status, fmt.Errorf("failed to inspect %s: %w", mcpPath, err)
 		}
-		if !present {
-			allPresent = false
-			status.Missing = append(status.Missing, sp.Path)
-			continue
-		}
-		if detail != "" {
-			status.Details = append(status.Details, detail)
+
+		if exists {
+			status.Details = append(status.Details, fmt.Sprintf("%s detected", caps.MCPConfigPath))
+		} else {
+			status.Missing = append(status.Missing, caps.MCPConfigPath)
 		}
 	}
 
-	status.Installed = allPresent
+	// If nothing is missing, consider it installed.
+	status.Installed = len(status.Missing) == 0 && len(status.Details) > 0
+
 	return status, nil
-}
-
-func (r *statusReporter) checkStatusPath(abs string, sp agents.StatusPath) (bool, string, error) {
-	switch sp.Kind {
-	case "file":
-		info, err := r.fs.Stat(abs)
-		if err != nil {
-			if errors.Is(err, fs.ErrNotExist) {
-				return false, "", nil
-			}
-			return false, "", fmt.Errorf("inspect %s: %w", abs, err)
-		}
-		if info.IsDir() {
-			return false, "", nil
-		}
-		return true, fmt.Sprintf("%s (%s)", sp.Path, sp.Description), nil
-
-	case "dir":
-		info, err := r.fs.Stat(abs)
-		if err != nil {
-			if errors.Is(err, fs.ErrNotExist) {
-				return false, "", nil
-			}
-			return false, "", fmt.Errorf("inspect %s: %w", abs, err)
-		}
-		if !info.IsDir() {
-			return false, "", nil
-		}
-		return true, fmt.Sprintf("%s (%s)", sp.Path, sp.Description), nil
-
-	case "non-empty-dir":
-		entries, err := r.fs.ReadDir(abs)
-		if err != nil {
-			if errors.Is(err, fs.ErrNotExist) {
-				return false, "", nil
-			}
-			return false, "", fmt.Errorf("inspect %s: %w", abs, err)
-		}
-		if len(entries) == 0 {
-			return false, "", nil
-		}
-		return true, fmt.Sprintf("%d %s in %s", len(entries), sp.Description, sp.Path), nil
-
-	default:
-		return false, "", fmt.Errorf("unknown status path kind %q", sp.Kind)
-	}
 }
 
 func (r *statusReporter) mcpStatus() (MCPStatus, error) {
 	if r.lookPath == nil {
 		r.lookPath = exec.LookPath
 	}
-	path, err := r.lookPath(mcpBinaryName)
+
+	path, err := r.lookPath("k6")
 	if err != nil {
-		if errors.Is(err, exec.ErrNotFound) {
+		var execErr *exec.Error
+		if errors.Is(err, exec.ErrNotFound) || (errors.As(err, &execErr) && errors.Is(execErr.Err, exec.ErrNotFound)) {
 			return MCPStatus{Installed: false}, nil
 		}
-		return MCPStatus{}, fmt.Errorf("inspect %s: %w", mcpBinaryName, err)
+
+		return MCPStatus{}, fmt.Errorf("failed to inspect %s: %w", "k6", err)
 	}
-	return MCPStatus{Installed: true, Path: path}, nil
+
+	return MCPStatus{
+		Installed: true,
+		Path:      path,
+	}, nil
+}
+
+func (r *statusReporter) fileExists(path string) (bool, error) {
+	info, err := r.fs.Stat(path)
+	if err != nil {
+		if errors.Is(err, fs.ErrNotExist) {
+			return false, nil
+		}
+
+		return false, err
+	}
+
+	return !info.IsDir(), nil
 }

@@ -1,0 +1,7 @@
+servers:
+  k6:
+    command: k6
+    args: [x, mcp]
+    description: k6 performance testing tools (validate, run, inspect scripts)
+    env: {}
+    transport: stdio

@@ -1,6 +1,10 @@
 // Package agents provides abstractions for initializing AI coding agent
 // configurations across different platforms (Claude, Copilot, Cursor, etc.).
-//
-// The core types live in agents/core. This package holds the embedded
-// skill assets and re-exports them for use by adapters and the CLI.
 package agents
+
+import "embed"
+
+// SkillsFS contains the embedded SKILL.md folders and their sibling files.
+//
+//go:embed skills/**
+var SkillsFS embed.FS
