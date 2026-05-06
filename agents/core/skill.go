@@ -125,7 +125,7 @@ func LoadSkills(fsys fs.FS) ([]Skill, error) {
 		return nil, fmt.Errorf("failed to read skills directory: %w", err)
 	}
 
-	var skills []Skill
+	skills := make([]Skill, 0, len(entries))
 
 	for _, entry := range entries {
 		if !entry.IsDir() {

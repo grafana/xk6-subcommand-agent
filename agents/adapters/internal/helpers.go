@@ -14,8 +14,6 @@ const ownerMarker = "xk6-agent:v1"
 // into baseDir/<skill.Name>/, including SKILL.md, sibling files, and the
 // .xk6-agent-managed marker file.
 func PlanSkillFolder(baseDir string, s core.Skill) ([]adapters.PlannedFile, error) {
-	var files []adapters.PlannedFile
-
 	// Render the SKILL.md from the parsed skill.
 	skillContent, err := core.RenderSkillMD(s)
 	if err != nil {
@@ -24,6 +22,7 @@ func PlanSkillFolder(baseDir string, s core.Skill) ([]adapters.PlannedFile, erro
 
 	skillDir := path.Join(baseDir, s.Name)
 
+	files := make([]adapters.PlannedFile, 0, 1+len(s.Files))
 	files = append(files, adapters.PlannedFile{
 		Path:        path.Join(skillDir, "SKILL.md"),
 		Content:     skillContent,

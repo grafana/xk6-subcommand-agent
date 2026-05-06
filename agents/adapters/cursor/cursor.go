@@ -27,7 +27,7 @@ func (cursorTarget) Capabilities() adapters.Capabilities {
 }
 
 func (c cursorTarget) Plan(_ context.Context, in adapters.Inputs) (adapters.Plan, error) {
-	var files []adapters.PlannedFile
+	files := make([]adapters.PlannedFile, 0, len(in.Skills)+1)
 
 	// 1. For each skill, render a .cursor/rules/<name>.mdc with
 	//    YAML frontmatter wrapper + SKILL.md body verbatim.

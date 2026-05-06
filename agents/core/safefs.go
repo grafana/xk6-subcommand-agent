@@ -46,7 +46,7 @@ type ApplyOptions struct {
 // Apply executes a plan against the filesystem, enforcing all safety rules.
 // Files are written relative to root.
 func Apply(files []PlannedFile, root string, opts ApplyOptions) ([]Outcome, error) {
-	var outcomes []Outcome
+	outcomes := make([]Outcome, 0, len(files))
 
 	for _, f := range files {
 		absPath := filepath.Join(root, f.Path)
