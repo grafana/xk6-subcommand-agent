@@ -6,7 +6,7 @@ import (
 	"text/tabwriter"
 
 	"github.com/spf13/cobra"
-	"go.k6.io/k6/cmd/state"
+	"go.k6.io/k6/v2/cmd/state"
 
 	"github.com/grafana/xk6-agent/agents"
 	"github.com/grafana/xk6-agent/agents/adapters"
