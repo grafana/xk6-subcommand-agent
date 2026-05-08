@@ -162,7 +162,7 @@ func applyOverwriteIfManaged(absPath string, f PlannedFile) (Outcome, error) {
 	return Outcome{Path: f.Path, Status: Updated}, nil
 }
 
-//nolint:forbidigo,gosec
+//nolint:forbidigo
 func applyMergeJSON(absPath string, f PlannedFile) (Outcome, error) {
 	if err := os.MkdirAll(filepath.Dir(absPath), 0o750); err != nil {
 		return Outcome{}, fmt.Errorf("mkdir for %s: %w", f.Path, err)

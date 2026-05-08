@@ -1,6 +1,6 @@
 module github.com/grafana/xk6-subcommand-agent
 
-go 1.26.3
+go 1.25.10
 
 require (
 	github.com/spf13/cobra v1.4.0
@@ -38,7 +38,6 @@ require (
 	go.opentelemetry.io/otel/sdk v1.43.0 // indirect
 	go.opentelemetry.io/otel/trace v1.43.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.10.0 // indirect
-	golang.org/dl v0.0.0-20260507145323-1987c81edec5 // indirect
 	golang.org/x/net v0.53.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
 	golang.org/x/text v0.36.0 // indirect
