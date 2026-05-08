@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/grafana/xk6-agent/agents/adapters"
-	"github.com/grafana/xk6-agent/agents/adapters/internal"
+	"github.com/grafana/xk6-subcommand-agent/agents/adapters"
+	"github.com/grafana/xk6-subcommand-agent/agents/adapters/internal"
 )
 
 func init() { adapters.Register(&claudeCode{}) }
@@ -49,7 +49,7 @@ func (c claudeCode) Plan(_ context.Context, in adapters.Inputs) (adapters.Plan, 
 		Content:     mcpContent,
 		Mode:        adapters.MergeJSONByKey,
 		MergeKey:    "mcpServers.k6",
-		OwnerMarker: "xk6-agent:v1",
+		OwnerMarker: "xk6-subcommand-agent:v1",
 	})
 
 	// 3. settings.local.json — enable our MCP server.
@@ -63,7 +63,7 @@ func (c claudeCode) Plan(_ context.Context, in adapters.Inputs) (adapters.Plan, 
 		Content:     settingsContent,
 		Mode:        adapters.MergeJSONByKey,
 		MergeKey:    "enabledMcpJsonServers",
-		OwnerMarker: "xk6-agent:v1",
+		OwnerMarker: "xk6-subcommand-agent:v1",
 	})
 
 	return adapters.Plan{Files: files}, nil

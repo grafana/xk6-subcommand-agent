@@ -8,8 +8,8 @@ import (
 	"path"
 	"strings"
 
-	"github.com/grafana/xk6-agent/agents/adapters"
-	"github.com/grafana/xk6-agent/agents/core"
+	"github.com/grafana/xk6-subcommand-agent/agents/adapters"
+	"github.com/grafana/xk6-subcommand-agent/agents/core"
 )
 
 func init() { adapters.Register(&cursorTarget{}) }
@@ -37,7 +37,7 @@ func (c cursorTarget) Plan(_ context.Context, in adapters.Inputs) (adapters.Plan
 			Path:        path.Join(".cursor", "rules", s.Name+".mdc"),
 			Content:     content,
 			Mode:        adapters.CreateOnly,
-			OwnerMarker: "xk6-agent:v1",
+			OwnerMarker: "xk6-subcommand-agent:v1",
 		})
 	}
 
@@ -52,7 +52,7 @@ func (c cursorTarget) Plan(_ context.Context, in adapters.Inputs) (adapters.Plan
 		Content:     mcpContent,
 		Mode:        adapters.MergeJSONByKey,
 		MergeKey:    "mcpServers.k6",
-		OwnerMarker: "xk6-agent:v1",
+		OwnerMarker: "xk6-subcommand-agent:v1",
 	})
 
 	return adapters.Plan{Files: files}, nil

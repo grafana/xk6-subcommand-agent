@@ -4,7 +4,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/grafana/xk6-agent/agents/adapters"
+	"github.com/grafana/xk6-subcommand-agent/agents/adapters"
 )
 
 type fakeTarget struct {

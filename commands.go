@@ -8,9 +8,9 @@ import (
 	"github.com/spf13/cobra"
 	"go.k6.io/k6/v2/cmd/state"
 
-	"github.com/grafana/xk6-agent/agents"
-	"github.com/grafana/xk6-agent/agents/adapters"
-	"github.com/grafana/xk6-agent/agents/core"
+	"github.com/grafana/xk6-subcommand-agent/agents"
+	"github.com/grafana/xk6-subcommand-agent/agents/adapters"
+	"github.com/grafana/xk6-subcommand-agent/agents/core"
 )
 
 func newListCommand(gs *state.GlobalState) *cobra.Command {

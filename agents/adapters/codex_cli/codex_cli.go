@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/grafana/xk6-agent/agents/adapters"
-	"github.com/grafana/xk6-agent/agents/adapters/internal"
+	"github.com/grafana/xk6-subcommand-agent/agents/adapters"
+	"github.com/grafana/xk6-subcommand-agent/agents/adapters/internal"
 )
 
 func init() { adapters.Register(&codexCLI{}) }
@@ -49,7 +49,7 @@ func (c codexCLI) Plan(_ context.Context, in adapters.Inputs) (adapters.Plan, er
 		Content:     mcpContent,
 		Mode:        adapters.MergeJSONByKey,
 		MergeKey:    "mcpServers.k6",
-		OwnerMarker: "xk6-agent:v1",
+		OwnerMarker: "xk6-subcommand-agent:v1",
 	})
 
 	return adapters.Plan{Files: files}, nil

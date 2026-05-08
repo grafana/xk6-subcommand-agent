@@ -4,15 +4,15 @@ package internal
 import (
 	"path"
 
-	"github.com/grafana/xk6-agent/agents/adapters"
-	"github.com/grafana/xk6-agent/agents/core"
+	"github.com/grafana/xk6-subcommand-agent/agents/adapters"
+	"github.com/grafana/xk6-subcommand-agent/agents/core"
 )
 
-const ownerMarker = "xk6-agent:v1"
+const ownerMarker = "xk6-subcommand-agent:v1"
 
 // PlanSkillFolder creates PlannedFile entries for copying a skill folder
 // into baseDir/<skill.Name>/, including SKILL.md, sibling files, and the
-// .xk6-agent-managed marker file.
+// .xk6-subcommand-agent-managed marker file.
 func PlanSkillFolder(baseDir string, s core.Skill) ([]adapters.PlannedFile, error) {
 	// Render the SKILL.md from the parsed skill.
 	skillContent, err := core.RenderSkillMD(s)

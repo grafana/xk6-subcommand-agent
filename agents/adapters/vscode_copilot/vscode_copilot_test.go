@@ -5,12 +5,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/grafana/xk6-agent/agents"
-	"github.com/grafana/xk6-agent/agents/adapters"
-	"github.com/grafana/xk6-agent/agents/core"
-	"github.com/grafana/xk6-agent/agents/mcp"
+	"github.com/grafana/xk6-subcommand-agent/agents"
+	"github.com/grafana/xk6-subcommand-agent/agents/adapters"
+	"github.com/grafana/xk6-subcommand-agent/agents/core"
+	"github.com/grafana/xk6-subcommand-agent/agents/mcp"
 
-	_ "github.com/grafana/xk6-agent/agents/adapters/vscode_copilot"
+	_ "github.com/grafana/xk6-subcommand-agent/agents/adapters/vscode_copilot"
 )
 
 func TestVSCodeCopilot_Registered(t *testing.T) {

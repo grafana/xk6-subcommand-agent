@@ -4,8 +4,8 @@ import (
 	"testing"
 	"testing/fstest"
 
-	"github.com/grafana/xk6-agent/agents"
-	"github.com/grafana/xk6-agent/agents/core"
+	"github.com/grafana/xk6-subcommand-agent/agents"
+	"github.com/grafana/xk6-subcommand-agent/agents/core"
 )
 
 func TestParseSkillMD_Valid(t *testing.T) {

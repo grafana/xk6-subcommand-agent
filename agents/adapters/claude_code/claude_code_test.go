@@ -4,12 +4,12 @@ import (
 	"context"
 	"testing"
 
-	"github.com/grafana/xk6-agent/agents"
-	"github.com/grafana/xk6-agent/agents/adapters"
-	"github.com/grafana/xk6-agent/agents/core"
-	"github.com/grafana/xk6-agent/agents/mcp"
+	"github.com/grafana/xk6-subcommand-agent/agents"
+	"github.com/grafana/xk6-subcommand-agent/agents/adapters"
+	"github.com/grafana/xk6-subcommand-agent/agents/core"
+	"github.com/grafana/xk6-subcommand-agent/agents/mcp"
 
-	_ "github.com/grafana/xk6-agent/agents/adapters/claude_code"
+	_ "github.com/grafana/xk6-subcommand-agent/agents/adapters/claude_code"
 )
 
 func TestClaudeCode_Registered(t *testing.T) {

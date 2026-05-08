@@ -1,4 +1,4 @@
-// Package core provides shared types and helpers for the xk6-agent skill
+// Package core provides shared types and helpers for the xk6-subcommand-agent skill
 // and adapter system.
 package core
 

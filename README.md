@@ -1,8 +1,8 @@
-# xk6-agent
+# xk6-subcommand-agent
 
 > Bootstrap an AI-assisted k6 testing workflow in any editor — Claude Code, Cursor, Copilot, Codex CLI, OpenCode, or Cline.
 
-`xk6-agent` powers the `k6 x agent` command group, shipped as part of [k6](https://k6.io/). One invocation drops a set of portable [`SKILL.md`](https://docs.claude.com/en/docs/agents/skills) bundles into your project and wires every supported AI coding tool to the built-in `k6 x mcp` server. The bundled skills cover planning, smoke / load / browser tests, and Playwright-to-k6 conversion.
+`xk6-subcommand-agent` powers the `k6 x agent` command group, shipped as part of [k6](https://k6.io/). One invocation drops a set of portable [`SKILL.md`](https://docs.claude.com/en/docs/agents/skills) bundles into your project and wires every supported AI coding tool to the built-in `k6 x mcp` server. The bundled skills cover planning, smoke / load / browser tests, and Playwright-to-k6 conversion.
 
 ## Contents
 
@@ -104,7 +104,7 @@ For the full design, see [`docs/DESIGN.md`](docs/DESIGN.md).
 
 - Never creates or modifies user-owned top-level files (`AGENTS.md`, `README.md`, etc.).
 - Surgically merges shared JSON config (`.vscode/mcp.json`, `.cursor/mcp.json`, `opencode.json`, `.mcp.json`) — only the `k6` entry is touched; other servers and unrelated keys are preserved.
-- Files inside `xk6-agent`-owned folders are stamped with an ownership marker. Re-running `init` is idempotent; `--force` is required to overwrite a file you have edited locally.
+- Files inside `xk6-subcommand-agent`-owned folders are stamped with an ownership marker. Re-running `init` is idempotent; `--force` is required to overwrite a file you have edited locally.
 - `--dry-run` prints the full plan before any disk write.
 
 Details: [`docs/DESIGN.md` §9](docs/DESIGN.md).
@@ -114,14 +114,14 @@ Details: [`docs/DESIGN.md` §9](docs/DESIGN.md).
 Requires Go ≥ 1.25.5.
 
 ```bash
-git clone https://github.com/grafana/xk6-agent.git
-cd xk6-agent
+git clone https://github.com/grafana/xk6-subcommand-agent.git
+cd xk6-subcommand-agent
 make test         # go test -race ./...
 make lint         # golangci-lint (>= 1.60)
 make vet
 ```
 
-To try local changes against a real `k6 x agent` invocation, build a custom k6 binary with `xk6 build --with github.com/grafana/xk6-agent=.` and run it from the resulting `./k6`.
+To try local changes against a real `k6 x agent` invocation, build a custom k6 binary with `xk6 build --with github.com/grafana/xk6-subcommand-agent=.` and run it from the resulting `./k6`.
 
 Repo layout:
 
@@ -135,7 +135,7 @@ To add a new target, create a package under `agents/adapters/<target>/` that imp
 
 ## Troubleshooting
 
-- **`folder already exists` / file collision** — re-run with `--force` to overwrite managed files. xk6-agent never deletes files it does not own.
+- **`folder already exists` / file collision** — re-run with `--force` to overwrite managed files. xk6-subcommand-agent never deletes files it does not own.
 - **`k6` not on PATH** (status reports `[-] k6 MCP support`) — install k6 from <https://grafana.com/docs/k6/latest/set-up/install-k6/>, and make sure your editor launches in a shell that can find it.
 - **Cline MCP entry missing** — Cline's MCP config is global. Copy the snippet printed by `init cline` into `cline_mcp_settings.json`.
 

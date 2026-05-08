@@ -1,8 +1,8 @@
-# xk6-agent — Design Document
+# xk6-subcommand-agent — Design Document
 
 Status: proposal · Audience: implementers (Claude Code, contributors) · Last updated: 2026-04-17
 
-This document describes the next iteration of `xk6-agent`. It is meant to be read once,
+This document describes the next iteration of `xk6-subcommand-agent`. It is meant to be read once,
 then implemented. Decisions that have already been made are stated as facts; things that
 still need confirmation are flagged as **Open Questions** at the end.
 
@@ -10,7 +10,7 @@ still need confirmation are flagged as **Open Questions** at the end.
 
 ## 1. Purpose
 
-`xk6-agent` is a `k6` extension that bootstraps an AI-assisted k6 testing workflow inside
+`xk6-subcommand-agent` is a `k6` extension that bootstraps an AI-assisted k6 testing workflow inside
 a user's project. After running `k6 x agent init`, the user's preferred AI coding tool
 should be able to:
 
@@ -99,7 +99,7 @@ A target's adapter is responsible for everything in its row.
 ## 5. Repository layout
 
 ```
-xk6-agent/
+xk6-subcommand-agent/
 ├── agents/
 │   ├── skills/                          # Source of truth — portable SKILL.md folders
 │   │   ├── k6-test-planner/
@@ -271,7 +271,7 @@ type PlannedFile struct {
     Content     []byte
     Mode        WriteMode          // CreateOnly | OverwriteIfManaged | MergeJSONByKey
     MergeKey    string             // for MergeJSONByKey: e.g. "mcpServers.k6"
-    OwnerMarker string             // e.g. "xk6-agent:v1"
+    OwnerMarker string             // e.g. "xk6-subcommand-agent:v1"
 }
 
 type WriteMode int
@@ -322,7 +322,7 @@ user-authored file. Three categories of files exist:
    contain user-authored entries (other MCP servers, other settings). We
    surgically update only our own keys and never overwrite the file wholesale.
 3. **Files inside our own folders** (`.claude/skills/k6-*/`, `.codex/skills/k6-*/`,
-   `.cursor/rules/k6-*/`, `.clinerules/k6-*.md`) — these are owned by xk6-agent;
+   `.cursor/rules/k6-*/`, `.clinerules/k6-*.md`) — these are owned by xk6-subcommand-agent;
    we manage them with ownership markers and detect user edits.
 
 Each category has its own write mode. Adapters never call the filesystem directly;
@@ -348,10 +348,10 @@ declares the key (e.g., `"mcpServers.k6"`) and the snippet; `safefs` does the me
 
 ### Skill folders we generate (`.claude/skills/k6-*/`, etc.)
 
-These folders are **owned by xk6-agent**. Policy:
+These folders are **owned by xk6-subcommand-agent**. Policy:
 
 1. **First write:** create the folder, drop a top-level marker file
-   `.xk6-agent-managed` containing the version + the SHA of the source skill.
+   `.xk6-subcommand-agent-managed` containing the version + the SHA of the source skill.
 2. **Re-run, marker present, source SHA differs:** overwrite (skill content updated).
 3. **Re-run, marker present, user-modified files inside:** detected via SHA mismatch
    on individual files. Print a warning per modified file; require `--force` to
@@ -443,7 +443,7 @@ func (c claudeCode) Plan(ctx adapters.Context, in adapters.Inputs) (adapters.Pla
         Content:     mcpFile,
         Mode:        adapters.MergeJSONByKey,
         MergeKey:    "mcpServers.k6",
-        OwnerMarker: "xk6-agent:v1",
+        OwnerMarker: "xk6-subcommand-agent:v1",
     })
 
     // 3. settings.local.json — enable our server.
@@ -452,7 +452,7 @@ func (c claudeCode) Plan(ctx adapters.Context, in adapters.Inputs) (adapters.Pla
         Content:     mustRenderSettings(in.MCP),
         Mode:        adapters.MergeJSONByKey,
         MergeKey:    "enabledMcpJsonServers",
-        OwnerMarker: "xk6-agent:v1",
+        OwnerMarker: "xk6-subcommand-agent:v1",
     })
 
     return adapters.Plan{Files: files}, nil
@@ -482,7 +482,7 @@ Adapter responsibilities by target:
 
 ```go
 // Copies all files of a skill into <baseDir>/<skill.Name>/, including SKILL.md
-// and any sibling scripts/references/. Adds .xk6-agent-managed marker file.
+// and any sibling scripts/references/. Adds .xk6-subcommand-agent-managed marker file.
 func planSkillFolder(baseDir string, s core.Skill) []adapters.PlannedFile { ... }
 ```
 

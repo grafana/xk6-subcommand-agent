@@ -3,8 +3,8 @@ package core_test
 import (
 	"testing"
 
-	"github.com/grafana/xk6-agent/agents/core"
-	"github.com/grafana/xk6-agent/agents/mcp"
+	"github.com/grafana/xk6-subcommand-agent/agents/core"
+	"github.com/grafana/xk6-subcommand-agent/agents/mcp"
 )
 
 func TestLoadMCPConfig_Valid(t *testing.T) {

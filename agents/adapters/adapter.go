@@ -1,4 +1,4 @@
-// Package adapters defines the Target interface and registry for xk6-agent
+// Package adapters defines the Target interface and registry for xk6-subcommand-agent
 // target adapters. Each supported AI coding tool (Claude Code, Cursor, etc.)
 // implements Target and self-registers via init().
 package adapters
@@ -6,7 +6,7 @@ package adapters
 import (
 	"context"
 
-	"github.com/grafana/xk6-agent/agents/core"
+	"github.com/grafana/xk6-subcommand-agent/agents/core"
 )
 
 // Target is the interface that every adapter must implement.
@@ -60,7 +60,7 @@ type PlannedFile struct {
 	// MergeKey is the dot-path for MergeJSONByKey mode
 	// (e.g. "mcpServers.k6").
 	MergeKey string
-	// OwnerMarker identifies managed files (e.g. "xk6-agent:v1").
+	// OwnerMarker identifies managed files (e.g. "xk6-subcommand-agent:v1").
 	OwnerMarker string
 }
 

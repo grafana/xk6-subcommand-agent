@@ -1,4 +1,4 @@
-module github.com/grafana/xk6-agent
+module github.com/grafana/xk6-subcommand-agent
 
 go 1.25.5
 

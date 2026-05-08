@@ -4,7 +4,7 @@ import (
 	"io/fs"
 	"testing"
 
-	"github.com/grafana/xk6-agent/agents"
+	"github.com/grafana/xk6-subcommand-agent/agents"
 )
 
 func TestSkillsFS_ContainsExpectedSkills(t *testing.T) {

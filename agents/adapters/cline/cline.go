@@ -8,8 +8,8 @@ import (
 	"path"
 	"strings"
 
-	"github.com/grafana/xk6-agent/agents/adapters"
-	"github.com/grafana/xk6-agent/agents/core"
+	"github.com/grafana/xk6-subcommand-agent/agents/adapters"
+	"github.com/grafana/xk6-subcommand-agent/agents/core"
 )
 
 func init() { adapters.Register(&clineTarget{}) }
@@ -39,7 +39,7 @@ func (c clineTarget) Plan(_ context.Context, in adapters.Inputs) (adapters.Plan,
 			Path:        path.Join(".clinerules", s.Name+".md"),
 			Content:     content,
 			Mode:        adapters.CreateOnly,
-			OwnerMarker: "xk6-agent:v1",
+			OwnerMarker: "xk6-subcommand-agent:v1",
 		})
 	}
 

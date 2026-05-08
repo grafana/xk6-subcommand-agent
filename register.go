@@ -13,18 +13,18 @@ import (
 	"go.k6.io/k6/v2/cmd/state"
 	"go.k6.io/k6/v2/subcommand"
 
-	"github.com/grafana/xk6-agent/agents"
-	"github.com/grafana/xk6-agent/agents/adapters"
-	"github.com/grafana/xk6-agent/agents/core"
-	"github.com/grafana/xk6-agent/agents/mcp"
+	"github.com/grafana/xk6-subcommand-agent/agents"
+	"github.com/grafana/xk6-subcommand-agent/agents/adapters"
+	"github.com/grafana/xk6-subcommand-agent/agents/core"
+	"github.com/grafana/xk6-subcommand-agent/agents/mcp"
 
 	// Register all adapter targets via init().
-	_ "github.com/grafana/xk6-agent/agents/adapters/claude_code"
-	_ "github.com/grafana/xk6-agent/agents/adapters/cline"
-	_ "github.com/grafana/xk6-agent/agents/adapters/codex_cli"
-	_ "github.com/grafana/xk6-agent/agents/adapters/cursor"
-	_ "github.com/grafana/xk6-agent/agents/adapters/opencode"
-	_ "github.com/grafana/xk6-agent/agents/adapters/vscode_copilot"
+	_ "github.com/grafana/xk6-subcommand-agent/agents/adapters/claude_code"
+	_ "github.com/grafana/xk6-subcommand-agent/agents/adapters/cline"
+	_ "github.com/grafana/xk6-subcommand-agent/agents/adapters/codex_cli"
+	_ "github.com/grafana/xk6-subcommand-agent/agents/adapters/cursor"
+	_ "github.com/grafana/xk6-subcommand-agent/agents/adapters/opencode"
+	_ "github.com/grafana/xk6-subcommand-agent/agents/adapters/vscode_copilot"
 )
 
 func init() {

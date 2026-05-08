@@ -9,7 +9,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/grafana/xk6-agent/agents/adapters"
+	"github.com/grafana/xk6-subcommand-agent/agents/adapters"
 )
 
 // StatusReport holds the overall status of agent installations.
