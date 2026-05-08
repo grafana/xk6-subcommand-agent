@@ -48,8 +48,8 @@ func (c codexCLI) Plan(_ context.Context, in adapters.Inputs) (adapters.Plan, er
 		Path:        ".codex/mcp.json",
 		Content:     mcpContent,
 		Mode:        adapters.MergeJSONByKey,
-		MergeKey:    "mcpServers.k6",
-		OwnerMarker: "xk6-subcommand-agent:v1",
+		MergeKey:    adapters.MCPServerKey,
+		OwnerMarker: adapters.OwnerMarker,
 	})
 
 	return adapters.Plan{Files: files}, nil

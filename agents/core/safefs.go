@@ -168,7 +168,7 @@ func applyMergeJSON(absPath string, f PlannedFile) (Outcome, error) {
 		return Outcome{}, fmt.Errorf("mkdir for %s: %w", f.Path, err)
 	}
 
-	existing, readErr := os.ReadFile(absPath)
+	existing, readErr := os.ReadFile(absPath) // #nosec G304 -- path is rooted via Apply(root)
 	if errors.Is(readErr, fs.ErrNotExist) {
 		if err := os.WriteFile(absPath, f.Content, 0o600); err != nil {
 			return Outcome{}, fmt.Errorf("write %s: %w", f.Path, err)
@@ -191,7 +191,7 @@ func applyMergeJSON(absPath string, f PlannedFile) (Outcome, error) {
 		return Outcome{}, fmt.Errorf("%s", msg)
 	}
 
-	if err := os.WriteFile(absPath, merged, 0o600); err != nil {
+	if err := os.WriteFile(absPath, merged, 0o600); err != nil { // #nosec G703 -- path is rooted via Apply(root)
 		return Outcome{}, fmt.Errorf("write merged %s: %w", f.Path, err)
 	}
 

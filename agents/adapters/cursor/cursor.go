@@ -37,7 +37,7 @@ func (c cursorTarget) Plan(_ context.Context, in adapters.Inputs) (adapters.Plan
 			Path:        path.Join(".cursor", "rules", s.Name+".mdc"),
 			Content:     content,
 			Mode:        adapters.CreateOnly,
-			OwnerMarker: "xk6-subcommand-agent:v1",
+			OwnerMarker: adapters.OwnerMarker,
 		})
 	}
 
@@ -51,8 +51,8 @@ func (c cursorTarget) Plan(_ context.Context, in adapters.Inputs) (adapters.Plan
 		Path:        ".cursor/mcp.json",
 		Content:     mcpContent,
 		Mode:        adapters.MergeJSONByKey,
-		MergeKey:    "mcpServers.k6",
-		OwnerMarker: "xk6-subcommand-agent:v1",
+		MergeKey:    adapters.MCPServerKey,
+		OwnerMarker: adapters.OwnerMarker,
 	})
 
 	return adapters.Plan{Files: files}, nil

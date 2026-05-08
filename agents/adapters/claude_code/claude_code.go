@@ -38,7 +38,7 @@ func (c claudeCode) Plan(_ context.Context, in adapters.Inputs) (adapters.Plan, 
 		files = append(files, skillFiles...)
 	}
 
-	// 2. MCP wiring — merge mcpServers.k6 into .mcp.json.
+	// 2. MCP wiring — merge into .mcp.json.
 	mcpContent, err := renderMCPJSON(in)
 	if err != nil {
 		return adapters.Plan{}, fmt.Errorf("claude-code: %w", err)
@@ -48,8 +48,8 @@ func (c claudeCode) Plan(_ context.Context, in adapters.Inputs) (adapters.Plan, 
 		Path:        ".mcp.json",
 		Content:     mcpContent,
 		Mode:        adapters.MergeJSONByKey,
-		MergeKey:    "mcpServers.k6",
-		OwnerMarker: "xk6-subcommand-agent:v1",
+		MergeKey:    adapters.MCPServerKey,
+		OwnerMarker: adapters.OwnerMarker,
 	})
 
 	// 3. settings.local.json — enable our MCP server.
@@ -63,7 +63,7 @@ func (c claudeCode) Plan(_ context.Context, in adapters.Inputs) (adapters.Plan, 
 		Content:     settingsContent,
 		Mode:        adapters.MergeJSONByKey,
 		MergeKey:    "enabledMcpJsonServers",
-		OwnerMarker: "xk6-subcommand-agent:v1",
+		OwnerMarker: adapters.OwnerMarker,
 	})
 
 	return adapters.Plan{Files: files}, nil

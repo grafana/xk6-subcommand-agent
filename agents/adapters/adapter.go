@@ -58,9 +58,9 @@ type PlannedFile struct {
 	// Mode controls how the file is written.
 	Mode WriteMode
 	// MergeKey is the dot-path for MergeJSONByKey mode
-	// (e.g. "mcpServers.k6").
+	// (e.g. MCPServerKey).
 	MergeKey string
-	// OwnerMarker identifies managed files (e.g. "xk6-subcommand-agent:v1").
+	// OwnerMarker identifies managed files (e.g. OwnerMarker).
 	OwnerMarker string
 }
 
@@ -75,4 +75,13 @@ const (
 	OverwriteIfManaged
 	// MergeJSONByKey does a surgical JSON merge at the specified MergeKey.
 	MergeJSONByKey
+)
+
+// Common constant values used across adapters.
+const (
+	// MCPServerKey is the key used in MCP config files
+	// for the k6 MCP server.
+	MCPServerKey = "mcpServers.k6"
+	// OwnerMarker is the ownership marker string stamped on managed files.
+	OwnerMarker = "xk6-subcommand-agent:v1"
 )

@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/grafana/xk6-subcommand-agent/agents/adapters"
 	"github.com/grafana/xk6-subcommand-agent/agents/core"
 )
 
@@ -123,7 +124,7 @@ func TestApply_MergeJSON_NewFile(t *testing.T) {
 			Path:     ".mcp.json",
 			Content:  content,
 			Mode:     core.MergeJSONByKeyMode,
-			MergeKey: "mcpServers.k6",
+			MergeKey: adapters.MCPServerKey,
 		},
 	}
 
@@ -160,7 +161,7 @@ func TestApply_MergeJSON_PreservesOtherKeys(t *testing.T) {
 			Path:     ".mcp.json",
 			Content:  newContent,
 			Mode:     core.MergeJSONByKeyMode,
-			MergeKey: "mcpServers.k6",
+			MergeKey: adapters.MCPServerKey,
 		},
 	}
 
@@ -204,7 +205,7 @@ func TestApply_MergeJSON_MalformedExisting(t *testing.T) {
 			Path:     ".mcp.json",
 			Content:  []byte(`{"mcpServers": {"k6": {}}}`),
 			Mode:     core.MergeJSONByKeyMode,
-			MergeKey: "mcpServers.k6",
+			MergeKey: adapters.MCPServerKey,
 		},
 	}
 
@@ -248,7 +249,7 @@ func TestApply_Idempotent(t *testing.T) {
 			Path:     ".mcp.json",
 			Content:  content,
 			Mode:     core.MergeJSONByKeyMode,
-			MergeKey: "mcpServers.k6",
+			MergeKey: adapters.MCPServerKey,
 		},
 	}
 

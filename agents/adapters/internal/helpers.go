@@ -8,8 +8,6 @@ import (
 	"github.com/grafana/xk6-subcommand-agent/agents/core"
 )
 
-const ownerMarker = "xk6-subcommand-agent:v1"
-
 // PlanSkillFolder creates PlannedFile entries for copying a skill folder
 // into baseDir/<skill.Name>/, including SKILL.md, sibling files, and the
 // .xk6-subcommand-agent-managed marker file.
@@ -27,7 +25,7 @@ func PlanSkillFolder(baseDir string, s core.Skill) ([]adapters.PlannedFile, erro
 		Path:        path.Join(skillDir, "SKILL.md"),
 		Content:     skillContent,
 		Mode:        adapters.CreateOnly,
-		OwnerMarker: ownerMarker,
+		OwnerMarker: adapters.OwnerMarker,
 	})
 
 	// Copy sibling files.
@@ -36,7 +34,7 @@ func PlanSkillFolder(baseDir string, s core.Skill) ([]adapters.PlannedFile, erro
 			Path:        path.Join(skillDir, f.RelPath),
 			Content:     f.Content,
 			Mode:        adapters.CreateOnly,
-			OwnerMarker: ownerMarker,
+			OwnerMarker: adapters.OwnerMarker,
 		})
 	}
 
