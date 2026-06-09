@@ -1,5 +1,5 @@
 ---
-name: perf-test-website
+name: k6-perf-test-website
 description: >-
   Use this skill when the user wants to performance-test, load-test, or stress-test
   a public website end-to-end with k6. Produces a hybrid protocol+browser test suite,

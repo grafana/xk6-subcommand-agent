@@ -16,7 +16,7 @@ func TestSkillsFS_ContainsExpectedSkills(t *testing.T) {
 		"skills/k6-browser-test/SKILL.md",
 		"skills/k6-smoke-test/SKILL.md",
 		"skills/k6-playwright-converter/SKILL.md",
-		"skills/perf-test-website/SKILL.md",
+		"skills/k6-perf-test-website/SKILL.md",
 	}
 
 	for _, path := range expectedSkills {
