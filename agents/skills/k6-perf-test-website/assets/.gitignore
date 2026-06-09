@@ -1,0 +1,7 @@
+node_modules/
+*.log
+.DS_Store
+
+# k6 results / monitor outputs (regeneratable; large; not source)
+results/
+/tmp/
