@@ -17,6 +17,7 @@ func TestSkillsFS_ContainsExpectedSkills(t *testing.T) {
 		"skills/k6-smoke-test/SKILL.md",
 		"skills/k6-playwright-converter/SKILL.md",
 		"skills/k6-perf-test-website/SKILL.md",
+		"skills/k6-trend-analysis/SKILL.md",
 	}
 
 	for _, path := range expectedSkills {
@@ -51,7 +52,7 @@ func TestSkillsFS_SkillCount(t *testing.T) {
 		t.Fatalf("failed to walk embedded skills FS: %v", err)
 	}
 
-	if count != 6 {
-		t.Fatalf("expected 6 SKILL.md files, got %d", count)
+	if count != 7 {
+		t.Fatalf("expected 7 SKILL.md files, got %d", count)
 	}
 }
