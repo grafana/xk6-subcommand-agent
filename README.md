@@ -56,6 +56,7 @@ Skills live in `agents/skills/` and are embedded into the binary.
 | `k6-smoke-test`           | "smoke test", "sanity check", "quick health check"                       |
 | `k6-browser-test`         | "browser test", "UI test with k6", "test the frontend"                   |
 | `k6-playwright-converter` | A Playwright script that needs to be ported to `k6/browser`              |
+| `k6-docs`                 | "look up k6 docs", any k6 API / option / executor / CLI flag question    |
 
 Run `k6 x agent skills show <name>` to print a skill's full `SKILL.md`.
 
