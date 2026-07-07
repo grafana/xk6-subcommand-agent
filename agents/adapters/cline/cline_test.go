@@ -72,8 +72,8 @@ func TestCline_Plan(t *testing.T) {
 		}
 	}
 
-	if ruleCount != 10 {
-		t.Errorf("expected 10 cline rules, got %d", ruleCount)
+	if ruleCount != 11 {
+		t.Errorf("expected 11 cline rules, got %d", ruleCount)
 	}
 
 	// Cline should have notices about global MCP config.

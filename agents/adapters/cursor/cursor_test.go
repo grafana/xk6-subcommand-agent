@@ -67,8 +67,8 @@ func TestCursor_Plan(t *testing.T) {
 		}
 	}
 
-	if ruleCount != 10 {
-		t.Errorf("expected 10 cursor rules, got %d", ruleCount)
+	if ruleCount != 11 {
+		t.Errorf("expected 11 cursor rules, got %d", ruleCount)
 	}
 
 	// Verify rules have frontmatter wrapper.
