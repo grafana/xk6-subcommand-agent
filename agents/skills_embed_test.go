@@ -18,6 +18,7 @@ func TestSkillsFS_ContainsExpectedSkills(t *testing.T) {
 		"skills/k6-playwright-converter/SKILL.md",
 		"skills/k6-perf-test-website/SKILL.md",
 		"skills/k6-manage/SKILL.md",
+		"skills/k6-docs/SKILL.md",
 	}
 
 	for _, path := range expectedSkills {

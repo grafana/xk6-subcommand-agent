@@ -187,6 +187,7 @@ func TestLoadSkills_FromEmbedded(t *testing.T) {
 		"k6-playwright-converter",
 		"k6-perf-test-website",
 		"k6-manage",
+		"k6-docs",
 	}
 	for _, name := range expected {
 		if !names[name] {
