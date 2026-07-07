@@ -53,7 +53,7 @@ func TestSkillsFS_SkillCount(t *testing.T) {
 		t.Fatalf("failed to walk embedded skills FS: %v", err)
 	}
 
-	if count != 7 {
-		t.Fatalf("expected 7 SKILL.md files, got %d", count)
+	if count != 8 {
+		t.Fatalf("expected 8 SKILL.md files, got %d", count)
 	}
 }
