@@ -146,8 +146,8 @@ func TestLoadSkills_FromEmbedded(t *testing.T) {
 		t.Fatalf("failed to load embedded skills: %v", err)
 	}
 
-	if len(skills) != 9 {
-		t.Fatalf("expected 9 skills, got %d", len(skills))
+	if len(skills) != 10 {
+		t.Fatalf("expected 10 skills, got %d", len(skills))
 	}
 
 	names := make(map[string]bool)
@@ -189,6 +189,7 @@ func TestLoadSkills_FromEmbedded(t *testing.T) {
 		"k6-manage",
 		"k6-docs",
 		"k6-cloud-investigate-test",
+		"k6-trend-analysis",
 	}
 	for _, name := range expected {
 		if !names[name] {
