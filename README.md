@@ -2,7 +2,7 @@
 
 > Bootstrap an AI-assisted k6 testing workflow in any editor — Claude Code, Cursor, Copilot, Codex CLI, OpenCode, or Cline.
 
-`xk6-subcommand-agent` powers the `k6 x agent` command group, shipped as part of [k6](https://k6.io/). One invocation drops a set of portable [`SKILL.md`](https://docs.claude.com/en/docs/agents/skills) bundles into your project and wires every supported AI coding tool to the built-in `k6 x mcp` server. The bundled skills cover planning, smoke / load / browser tests, and Playwright-to-k6 conversion.
+`xk6-subcommand-agent` powers the `k6 x agent` command group, shipped as part of [k6](https://k6.io/). One invocation drops a set of portable [`SKILL.md`](https://docs.claude.com/en/docs/agents/skills) bundles into your project and wires every supported AI coding tool to the built-in `k6 x mcp` server. The bundled skills cover planning, smoke / load / browser tests, Playwright-to-k6 conversion, k6 docs lookup, end-to-end website performance testing, and Grafana Cloud k6 management, investigation, and maintenance.
 
 ## Contents
 
@@ -49,14 +49,19 @@ Open your editor and ask it to plan or write a k6 test — the bundled skills au
 
 Skills live in `agents/skills/` and are embedded into the binary.
 
-| Skill                     | Triggers on                                                              |
-| ------------------------- | ------------------------------------------------------------------------ |
-| `k6-test-planner`         | "plan tests", "design a test strategy", "what k6 tests should I write"   |
-| `k6-load-test`            | "write a k6 script", "load test", "stress / soak / spike test"           |
-| `k6-smoke-test`           | "smoke test", "sanity check", "quick health check"                       |
-| `k6-browser-test`         | "browser test", "UI test with k6", "test the frontend"                   |
-| `k6-playwright-converter` | A Playwright script that needs to be ported to `k6/browser`              |
-| `k6-docs`                 | "look up k6 docs", any k6 API / option / executor / CLI flag question    |
+| Skill                       | Triggers on                                                              |
+| --------------------------- | ------------------------------------------------------------------------ |
+| `k6-test-planner`           | "plan tests", "design a test strategy", "what k6 tests should I write"   |
+| `k6-load-test`              | "write a k6 script", "load test", "stress / soak / spike test"           |
+| `k6-smoke-test`             | "smoke test", "sanity check", "quick health check"                       |
+| `k6-browser-test`           | "browser test", "UI test with k6", "test the frontend"                   |
+| `k6-playwright-converter`   | A Playwright script that needs to be ported to `k6/browser`              |
+| `k6-docs`                   | "look up k6 docs", any k6 API / option / executor / CLI flag question    |
+| `k6-perf-test-website`      | "perf test my site", "load test this URL", end-to-end website perf       |
+| `k6-manage`                 | "list my cloud tests", "fetch run logs / metrics", "edit a cloud script" |
+| `k6-cloud-investigate-test` | "why did run X fail", "is this test passing", investigate a cloud run    |
+| `k6-trend-analysis`         | "is P95 getting worse", "are my tests degrading", "tighten thresholds?"  |
+| `k6-test-maintenance`       | "fix my k6 test", "tighten thresholds", "migrate to a new k6 version"    |
 
 Run `k6 x agent skills show <name>` to print a skill's full `SKILL.md`.
 
