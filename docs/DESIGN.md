@@ -108,7 +108,13 @@ xk6-subcommand-agent/
 │   │   ├── k6-load-test/SKILL.md
 │   │   ├── k6-browser-test/SKILL.md
 │   │   ├── k6-smoke-test/SKILL.md
-│   │   └── k6-playwright-converter/SKILL.md
+│   │   ├── k6-playwright-converter/SKILL.md
+│   │   ├── k6-perf-test-website/SKILL.md
+│   │   ├── k6-manage/SKILL.md
+│   │   ├── k6-docs/SKILL.md
+│   │   ├── k6-cloud-investigate-test/SKILL.md
+│   │   ├── k6-trend-analysis/SKILL.md
+│   │   └── k6-test-maintenance/SKILL.md
 │   │
 │   ├── mcp/
 │   │   └── servers.yaml                 # Canonical MCP server schema
