@@ -23,6 +23,7 @@ import (
 	_ "github.com/grafana/xk6-subcommand-agent/agents/adapters/cline"
 	_ "github.com/grafana/xk6-subcommand-agent/agents/adapters/codex_cli"
 	_ "github.com/grafana/xk6-subcommand-agent/agents/adapters/cursor"
+	_ "github.com/grafana/xk6-subcommand-agent/agents/adapters/ibm_bob"
 	_ "github.com/grafana/xk6-subcommand-agent/agents/adapters/opencode"
 	_ "github.com/grafana/xk6-subcommand-agent/agents/adapters/vscode_copilot"
 )
